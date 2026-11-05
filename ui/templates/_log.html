@@ -1,0 +1,4 @@
+{% for r in rows %}{% if r.kind == "out" %}<span class="ln out"><span class="tool">[{{ r.tool }}]</span> {{ r.detail }}</span>
+{% else %}<span class="ln"><span class="t">[{{ r.ts|ts }}]</span> <span class="tool">[{{ r.tool }}]</span>{% if r.target %} <span class="tgt">{{ r.target }}</span>{% endif %} <span class="{{ r.verdict }}">{{ r.verdict }}</span>{% if r.detail %} — {{ r.detail }}{% endif %}</span>
+{% endif %}{% endfor %}{% if not rows %}<span class="ln t">no activity yet — run a tool.</span>
+{% endif %}

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wraith-console"
+version = "0.1.0"
+description = "Wraith Console — a scope-locked, self-hosted web console for authorized web-application security testing"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.32.1",
+    "jinja2==3.1.4",
+    "itsdangerous==2.2.0",
+    "python-multipart==0.0.17",
+    "httpx==0.28.1",
+    "curl_cffi==0.16.3",
+    "pyyaml==6.0.2",
+    "playwright==1.47.0",
+]
+
+[tool.setuptools]
+packages = ["mcp_server", "mcp_server.tools", "ui"]

@@ -1,0 +1,13 @@
+<table class="table"><thead><tr><th>host</th><th>port</th><th></th></tr></thead><tbody>
+{% for t in scope %}
+<tr><td class="pill">{{ t.host }}</td><td>{{ t.port if t.port is not none else 'any' }}</td>
+  <td style="text-align:right">
+    <form class="ajax" action="/api/scope/remove" data-target="#scopebox" data-label="target removed" style="display:inline">
+      <input type="hidden" name="host" value="{{ t.host }}">
+      <input type="hidden" name="port" value="{{ t.port if t.port is not none else '' }}">
+      <button class="del" type="submit">remove</button>
+    </form>
+  </td></tr>
+{% endfor %}
+{% if not scope %}<tr><td colspan="3" class="hint">scope is empty — nothing can be tested until you add a target.</td></tr>{% endif %}
+</tbody></table>

@@ -1,0 +1,10 @@
+# Authorized targets. DEFAULT-DENY: anything not listed here is refused by every tool.
+# Add ONLY systems you own or are explicitly authorized to test.
+targets:
+  - host: 172.28.0.2        # example: a local OWASP Juice Shop on an internal network
+    port: 3000
+
+notes: >
+  Default-deny scope. Every tool call is scope-checked server-side before it runs;
+  any target not listed above is refused and never dispatched. The example points at a
+  sandboxed OWASP Juice Shop — replace it with your own authorized target(s).

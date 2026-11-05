@@ -1,0 +1,7 @@
+<table class="table"><thead><tr><th>severity</th><th>title</th><th>class</th><th>target</th><th>id</th></tr></thead><tbody>
+{% for f in rows %}
+<tr><td><span class="sev {{ f.severity }}">{{ f.severity }}</span></td><td>{{ f.title }}</td>
+  <td class="pill">{{ f.vuln_class }}</td><td class="hint">{{ f.target }}</td><td class="hint">{{ f.id }}</td></tr>
+{% endfor %}
+{% if not rows %}<tr><td colspan="5" class="hint">no findings recorded yet.</td></tr>{% endif %}
+</tbody></table>

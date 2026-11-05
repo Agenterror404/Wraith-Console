@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+{% block title %}Wraith Console{% endblock %}
+{% block head %}
+<meta name="csrf" content="{{ csrf }}">
+<script src="/static/wraith.js?v={{ asset_ver }}" defer></script>
+{% endblock %}
+{% block body %}
+<div class="app">
+  <aside class="rail">
+    <div class="brandmark">
+      <svg class="ghost" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <path d="M32 6C19 6 11 16 11 30v24c0 2 2 3 4 2l4-3 5 3c1 .7 2 .7 3 0l5-3 5 3c1 .7 2 .7 3 0l4 3c2 1 4 0 4-2V30C53 16 45 6 32 6Z" fill="#bd93f9" opacity=".92"/>
+        <circle cx="25" cy="29" r="4" fill="#15161d"/><circle cx="40" cy="29" r="4" fill="#15161d"/>
+        <circle cx="26" cy="28" r="1.3" fill="#8be9fd"/><circle cx="41" cy="28" r="1.3" fill="#8be9fd"/>
+      </svg>
+      <div class="bn">WRAITH<small>CONSOLE</small></div>
+    </div>
+    <nav class="nav">
+      <button class="on" data-view="dash"><span class="ic">◰</span><span>Dashboard</span></button>
+      <button data-view="tools"><span class="ic">⌘</span><span>Tools</span></button>
+      <button data-view="scope"><span class="ic">⛊</span><span>Scope</span></button>
+      <button data-view="findings"><span class="ic">⚑</span><span>Findings</span></button>
+      <button data-view="settings"><span class="ic">⚙</span><span>Settings</span></button>
+    </nav>
+    <div class="spacer"></div>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="logout" type="submit">⇥ Log out</button></form>
+    <div class="railfoot">scope-locked · stealth <b>on</b><br>egress <b>locked</b> · no phone-home</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="wordmark" data-text="WRAITH">WRAITH</div>
+      <span class="tag">ghost in your stack</span>
+      <div class="right">
+        <div class="exit" title="Active network exit (set via PENTEST_EXIT; browser tz/geo follows it)">⇄ {{ exit_city }} · {{ exit_tz }}</div>
+        <div class="status"><span class="dot"></span> ARMED · SCOPE-LOCKED</div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section class="view active" data-view="dash">
+        <div><div class="eyebrow">overview</div><h2 class="sec">Live activity<span class="live-dot"></span></h2></div>
+        <div class="card"><div class="hd"><span class="t">RUN SCAN</span></div>
+          <div class="content" style="padding:15px">
+            <form class="ajax" action="/api/scan" data-target="#res-scan" data-label="scan started">
+              <div class="f" style="max-width:480px"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+              <label class="hint" style="display:flex;align-items:center;gap:8px;margin:9px 0"><input type="checkbox" name="heavy" value="1" style="width:auto"> include heavy tools (sqlmap + headless browser) — slower &amp; noisier</label>
+              <button class="run" type="submit" style="max-width:220px">▶ RUN SCAN</button>
+            </form>
+            <div class="result" id="res-scan"></div>
+            <div class="hint" style="margin-top:8px">recon → enum → xss in sequence (+ injection / browser if checked). Each step streams into the log below.</div>
+          </div>
+        </div>
+
+        <div class="card"><div class="hd"><span class="t">PHASE SCANS</span></div>
+          <div class="content" style="padding:15px">
+            <div class="hint" style="margin-bottom:10px">Run a whole phase of related tools in sequence. Separate from Run Scan; one runs at a time, streaming into the log below.</div>
+            <div class="f" style="max-width:480px"><label>target</label><input id="bulk-target" value="http://172.28.0.2:3000"></div>
+            <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:10px">
+              <form class="ajax bulk" action="/api/bulk/recon_sweep" data-target="#res-bulk" data-label="Recon Sweep"><button class="run" type="submit">▶ RECON SWEEP</button></form>
+              <form class="ajax bulk" action="/api/bulk/vuln_scan" data-target="#res-bulk" data-label="Vuln Scan"><button class="run" type="submit">▶ VULN SCAN</button></form>
+              <form class="ajax bulk" action="/api/bulk/injection_suite" data-target="#res-bulk" data-label="Injection Suite"><button class="run danger" type="submit">▶ INJECTION SUITE</button></form>
+              <form class="ajax bulk" action="/api/bulk/config" data-target="#res-bulk" data-label="Config &amp; Crypto"><button class="run" type="submit">▶ CONFIG &amp; CRYPTO</button></form>
+              <form class="ajax bulk" action="/api/bulk/session" data-target="#res-bulk" data-label="Session &amp; Identity"><button class="run" type="submit">▶ SESSION &amp; IDENTITY</button></form>
+              <form class="ajax bulk" action="/api/bulk/api" data-target="#res-bulk" data-label="API &amp; GraphQL"><button class="run" type="submit">▶ API &amp; GRAPHQL</button></form>
+              <form class="ajax bulk" action="/api/bulk/js_secrets" data-target="#res-bulk" data-label="JS &amp; Secrets"><button class="run" type="submit">▶ JS &amp; SECRETS</button></form>
+            </div>
+            <div class="result" id="res-bulk"></div>
+          </div>
+        </div>
+        <div class="term">
+          <div class="bar"><span class="d r"></span><span class="d y"></span><span class="d g"></span>
+            <span class="ttl">wraith@console — scope-gated calls (auto-refresh)</span>
+            <form class="ajax" action="/api/scan/stop" data-label="stop requested" style="margin-left:auto"><button class="stopbtn" type="submit">■ STOP SCAN</button></form></div>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="card"><div class="hd"><span class="t">HOW IT WORKS</span></div>
+          <div class="content" style="padding:15px">
+            <p class="hint" style="line-height:1.7">Every tool call is scope-checked server-side before it runs — an
+            out-of-scope target is <span style="color:var(--red)">refused</span> and never sent. Add the hosts you're
+            authorized to test under <b>Scope</b>, then drive any of the ten tools from <b>Tools</b>. Confirmed
+            findings (with proof) collect under <b>Findings</b> and export to a markdown report.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TOOLS -->
+      <section class="view" data-view="tools">
+        <div><div class="eyebrow">manual control</div><h2 class="sec">Tools — full parameter control</h2>
+          <div class="hint" style="margin-top:6px">Out-of-scope targets come back <span style="color:var(--red)">refused</span>, never sent.</div></div>
+        <div class="tools">
+
+          <div class="tool"><div class="th"><span class="nm">show_scope()</span><span class="cat">core</span></div>
+            <div class="td"><div class="desc">List the authorized targets the guard allows.</div>
+              <form class="ajax" action="/api/tool/show_scope" data-target="#res-show_scope" data-label="show_scope">
+                <button class="run" type="submit">▶ RUN show_scope</button></form>
+              <div class="result" id="res-show_scope"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">recon_http()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Fingerprint: status, server, title, headers.</div>
+              <form class="ajax" action="/api/tool/recon_http" data-target="#res-recon_http" data-label="recon_http">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN recon_http</button></form>
+              <div class="result" id="res-recon_http"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">browser_recon()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Real-browser recon for JS/CDN targets (Vercel, Cloudflare, SPAs): renders the page, lets a same-origin JS challenge solve itself, then extracts real routes/scripts/forms, headers, cookies, the hosts it talks to, and a screenshot. Managed bot challenges (Vercel Attack Challenge Mode, Cloudflare Turnstile) refuse headless automation by design — pass a <b>clearance cookie</b> you got by solving the challenge once in your own authorized browser to recon past them.</div>
+              <form class="ajax" action="/api/tool/browser_recon" data-target="#res-browser_recon" data-label="browser_recon">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="f"><label>clearance cookie (optional — name=value; name2=value2)</label><input name="cookie" placeholder="_vcrcs=...; _vercel_jwt=..."></div>
+                <button class="run" type="submit">▶ RUN browser_recon</button></form>
+              <div class="result" id="res-browser_recon"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">enum_paths()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Probe common paths from the bundled wordlist.</div>
+              <form class="ajax" action="/api/tool/enum_paths" data-target="#res-enum_paths" data-label="enum_paths">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="f"><label>wordlist (optional, bundled name)</label><input name="wordlist_path" placeholder="common.txt"></div>
+                <button class="run" type="submit">▶ RUN enum_paths</button></form>
+              <div class="result" id="res-enum_paths"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">http_request()</span><span class="cat">analysis</span></div>
+            <div class="td"><div class="desc">Arbitrary request — the workhorse.</div>
+              <form class="ajax" action="/api/tool/http_request" data-target="#res-http_request" data-label="http_request">
+                <div class="row"><div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method">
+                    <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option><option>OPTIONS</option><option>HEAD</option></select></div></div>
+                <div class="f"><label>headers (JSON)</label><textarea name="headers" placeholder='{"X-Test":"1"}'></textarea></div>
+                <div class="f"><label>body</label><textarea name="body"></textarea></div>
+                <div class="f"><label>cookies (JSON)</label><textarea name="cookies" placeholder='{"token":"..."}'></textarea></div>
+                <button class="run" type="submit">▶ RUN http_request</button></form>
+              <div class="result" id="res-http_request"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">injection()</span><span class="cat">analysis</span></div>
+            <div class="td"><div class="desc">sqlmap (--batch --random-agent) against a URL.</div>
+              <form class="ajax" action="/api/tool/injection" data-target="#res-injection" data-label="injection">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000/rest/products/search?q=1"></div>
+                <div class="f"><label>extra_args (optional)</label><input name="extra_args" placeholder="--level 2 --risk 1"></div>
+                <button class="run" type="submit">▶ RUN injection</button></form>
+              <div class="result" id="res-injection"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">xss()</span><span class="cat">analysis</span></div>
+            <div class="td"><div class="desc">Reflection check on a parameter.</div>
+              <form class="ajax" action="/api/tool/xss" data-target="#res-xss" data-label="xss">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000/rest/products/search"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="q"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>GET</option><option>POST</option></select></div></div>
+                <button class="run" type="submit">▶ RUN xss</button></form>
+              <div class="result" id="res-xss"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">authz()</span><span class="cat">analysis</span></div>
+            <div class="td"><div class="desc">Session-diff two cookie sets for broken access control.</div>
+              <form class="ajax" action="/api/tool/authz" data-target="#res-authz" data-label="authz">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000/rest/basket/1"></div>
+                <div class="f"><label>session_a (JSON cookies)</label><textarea name="session_a" placeholder='{"token":"userA"}'></textarea></div>
+                <div class="f"><label>session_b (JSON cookies)</label><textarea name="session_b" placeholder='{"token":"userB"}'></textarea></div>
+                <button class="run" type="submit">▶ RUN authz</button></form>
+              <div class="result" id="res-authz"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">browser_scenario()</span><span class="cat">browser</span></div>
+            <div class="td"><div class="desc">Headless Chromium flow (login/2FA, DOM XSS). Stealthed.</div>
+              <form class="ajax" action="/api/tool/browser_scenario" data-target="#res-browser_scenario" data-label="browser_scenario">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000/#/login"></div>
+                <div class="f"><label>steps (JSON array)</label><textarea name="steps" placeholder='[{"fill":"#email","value":"a@b.c"},{"click":"#loginButton"}]'></textarea></div>
+                <div class="f"><label>OAST listener (optional — empty = off)</label><input name="oast_host" placeholder="abc.oast.site"></div>
+                <button class="run" type="submit">▶ RUN browser_scenario</button></form>
+              <div class="result" id="res-browser_scenario"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">whatweb()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Fingerprint web server / framework / CMS (sealed runner).</div>
+              <form class="ajax" action="/api/tool/whatweb" data-target="#res-whatweb" data-label="whatweb">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN whatweb</button></form>
+              <div class="result" id="res-whatweb"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">wafw00f()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Detect a WAF/CDN in front of the target.</div>
+              <form class="ajax" action="/api/tool/wafw00f" data-target="#res-wafw00f" data-label="wafw00f">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN wafw00f</button></form>
+              <div class="result" id="res-wafw00f"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">arjun()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Discover hidden HTTP parameters (feeds cmdi/ssti/xss).</div>
+              <form class="ajax" action="/api/tool/arjun" data-target="#res-arjun" data-label="arjun">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN arjun</button></form>
+              <div class="result" id="res-arjun"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">katana()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Crawl the target and list discovered endpoints/URLs.</div>
+              <form class="ajax" action="/api/tool/katana" data-target="#res-katana" data-label="katana">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN katana</button></form>
+              <div class="result" id="res-katana"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">ffuf()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Content/directory discovery (bundled common wordlist).</div>
+              <form class="ajax" action="/api/tool/ffuf" data-target="#res-ffuf" data-label="ffuf">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN ffuf</button></form>
+              <div class="result" id="res-ffuf"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">feroxbuster()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Recursive content/directory discovery (depth 2, via the scope-proxy).</div>
+              <form class="ajax" action="/api/tool/feroxbuster" data-target="#res-feroxbuster" data-label="feroxbuster">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN feroxbuster</button></form>
+              <div class="result" id="res-feroxbuster"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">wpscan()</span><span class="cat">cms</span></div>
+            <div class="td"><div class="desc">WordPress enumeration — vulnerable plugins + users (tokenless), via the scope-proxy.</div>
+              <form class="ajax" action="/api/tool/wpscan" data-target="#res-wpscan" data-label="wpscan">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN wpscan</button></form>
+              <div class="result" id="res-wpscan"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">xsstrike()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">Context-aware reflected/DOM XSS fuzzing (complements dalfox).</div>
+              <form class="ajax" action="/api/tool/xsstrike" data-target="#res-xsstrike" data-label="xsstrike">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN xsstrike</button></form>
+              <div class="result" id="res-xsstrike"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">nosqli()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">NoSQL (MongoDB-style) injection — auth bypass / data leakage.</div>
+              <form class="ajax" action="/api/tool/nosqli" data-target="#res-nosqli" data-label="nosqli">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN nosqli</button></form>
+              <div class="result" id="res-nosqli"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">ppfuzz()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">Prototype-pollution fuzzing (JS object poisoning → takeover/RCE).</div>
+              <form class="ajax" action="/api/tool/ppfuzz" data-target="#res-ppfuzz" data-label="ppfuzz">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN ppfuzz</button></form>
+              <div class="result" id="res-ppfuzz"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">joomscan()</span><span class="cat">cms</span></div>
+            <div class="td"><div class="desc">Joomla vuln/component enumeration (OWASP JoomScan).</div>
+              <form class="ajax" action="/api/tool/joomscan" data-target="#res-joomscan" data-label="joomscan">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN joomscan</button></form>
+              <div class="result" id="res-joomscan"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">droopescan()</span><span class="cat">cms</span></div>
+            <div class="td"><div class="desc">Drupal enumeration — modules, themes, version (droopescan).</div>
+              <form class="ajax" action="/api/tool/droopescan" data-target="#res-droopescan" data-label="droopescan">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN droopescan</button></form>
+              <div class="result" id="res-droopescan"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">gobuster_vhost()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Virtual-host discovery — hidden sites on the same server.</div>
+              <form class="ajax" action="/api/tool/gobuster_vhost" data-target="#res-gobuster_vhost" data-label="gobuster_vhost">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN gobuster_vhost</button></form>
+              <div class="result" id="res-gobuster_vhost"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">nuclei_dast()</span><span class="cat">scanner</span></div>
+            <div class="td"><div class="desc">Active-fuzzing scan (injection/SSRF/redirect/XXE) — slower than nuclei.</div>
+              <form class="ajax" action="/api/tool/nuclei_dast" data-target="#res-nuclei_dast" data-label="nuclei_dast">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN nuclei_dast</button></form>
+              <div class="result" id="res-nuclei_dast"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">screenshot()</span><span class="cat">recon</span></div>
+            <div class="td"><div class="desc">Full-page screenshot via scope-gated headless Chromium — visual evidence (appears in Results).</div>
+              <form class="ajax" action="/api/tool/screenshot" data-target="#res-screenshot" data-label="screenshot">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN screenshot</button></form>
+              <div class="result" id="res-screenshot"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">check_config()</span><span class="cat">config</span></div>
+            <div class="td"><div class="desc">Security headers, CORS, cookie flags, HTTP methods, version disclosure.</div>
+              <form class="ajax" action="/api/tool/check_config" data-target="#res-check_config" data-label="check_config">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN check_config</button></form>
+              <div class="result" id="res-check_config"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">tls()</span><span class="cat">crypto</span></div>
+            <div class="td"><div class="desc">Negotiated TLS version + cipher; flags obsolete TLS 1.0/1.1 and cleartext.</div>
+              <form class="ajax" action="/api/tool/tls" data-target="#res-tls" data-label="tls">
+                <div class="f"><label>target</label><input name="target" value="https://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN tls</button></form>
+              <div class="result" id="res-tls"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">cmdi()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">Command/code injection — marker echo, /etc/passwd read, time-based blind.</div>
+              <form class="ajax" action="/api/tool/cmdi" data-target="#res-cmdi" data-label="cmdi">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000/rest/products/search"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="q"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>GET</option><option>POST</option></select></div></div>
+                <button class="run danger" type="submit">▶ RUN cmdi</button></form>
+              <div class="result" id="res-cmdi"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">ssti()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">Template injection — confirms 7*7→49 evaluation across engines.</div>
+              <form class="ajax" action="/api/tool/ssti" data-target="#res-ssti" data-label="ssti">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="q"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>GET</option><option>POST</option></select></div></div>
+                <button class="run danger" type="submit">▶ RUN ssti</button></form>
+              <div class="result" id="res-ssti"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">path_traversal()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">LFI / directory traversal — reads /etc/passwd or win.ini.</div>
+              <form class="ajax" action="/api/tool/path_traversal" data-target="#res-path_traversal" data-label="path_traversal">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="file"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>GET</option><option>POST</option></select></div></div>
+                <button class="run danger" type="submit">▶ RUN path_traversal</button></form>
+              <div class="result" id="res-path_traversal"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">open_redirect()</span><span class="cat">client</span></div>
+            <div class="td"><div class="desc">Open redirect — confirms 3xx Location to an external canary.</div>
+              <form class="ajax" action="/api/tool/open_redirect" data-target="#res-open_redirect" data-label="open_redirect">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="redirect"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>GET</option><option>POST</option></select></div></div>
+                <button class="run" type="submit">▶ RUN open_redirect</button></form>
+              <div class="result" id="res-open_redirect"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">ssrf()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">SSRF — injects internal/metadata URLs. Add an OOB host for blind confirmation.</div>
+              <form class="ajax" action="/api/tool/ssrf" data-target="#res-ssrf" data-label="ssrf">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="url"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>GET</option><option>POST</option></select></div></div>
+                <div class="f"><label>oast_host (optional OOB listener)</label><input name="oast_host" placeholder="abc.oast.site"></div>
+                <button class="run danger" type="submit">▶ RUN ssrf</button></form>
+              <div class="result" id="res-ssrf"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">stored_xss()</span><span class="cat">injection</span></div>
+            <div class="td"><div class="desc">Inject a marker payload, re-fetch, confirm it persisted unescaped.</div>
+              <form class="ajax" action="/api/tool/stored_xss" data-target="#res-stored_xss" data-label="stored_xss">
+                <div class="f"><label>target (inject URL)</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="row"><div class="f"><label>param</label><input name="param" value="comment"></div>
+                  <div class="f" style="max-width:120px"><label>method</label><select name="method"><option>POST</option><option>GET</option></select></div></div>
+                <div class="f"><label>verify_url (where it renders)</label><input name="verify_url" placeholder="http://172.28.0.2:3000/page"></div>
+                <button class="run danger" type="submit">▶ RUN stored_xss</button></form>
+              <div class="result" id="res-stored_xss"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">csrf()</span><span class="cat">session</span></div>
+            <div class="td"><div class="desc">Finds state-changing forms with no anti-CSRF token; flags SameSite.</div>
+              <form class="ajax" action="/api/tool/csrf" data-target="#res-csrf" data-label="csrf">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN csrf</button></form>
+              <div class="result" id="res-csrf"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">session()</span><span class="cat">session</span></div>
+            <div class="td"><div class="desc">Cookie flags + JWT decode (alg:none / missing exp / HS256).</div>
+              <form class="ajax" action="/api/tool/session" data-target="#res-session" data-label="session">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN session</button></form>
+              <div class="result" id="res-session"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">auth()</span><span class="cat">auth</span></div>
+            <div class="td"><div class="desc">Default creds, account enumeration, weak lockout, cleartext login. Active.</div>
+              <form class="ajax" action="/api/tool/auth" data-target="#res-auth" data-label="auth">
+                <div class="f"><label>target (login POST URL)</label><input name="target" value="http://172.28.0.2:3000/rest/user/login"></div>
+                <div class="row"><div class="f"><label>username field</label><input name="username_field" value="email"></div>
+                  <div class="f"><label>password field</label><input name="password_field" value="password"></div></div>
+                <label class="hint" style="display:flex;align-items:center;gap:7px;margin:4px 0"><input type="checkbox" name="default_creds" value="1" checked style="width:auto"> try default credentials</label>
+                <label class="hint" style="display:flex;align-items:center;gap:7px;margin:0 0 4px"><input type="checkbox" name="test_lockout" value="1" style="width:auto"> test lockout (sends repeated failed logins)</label>
+                <button class="run danger" type="submit">▶ RUN auth</button></form>
+              <div class="result" id="res-auth"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">api()</span><span class="cat">api</span></div>
+            <div class="td"><div class="desc">API surface recon + GraphQL introspection.</div>
+              <form class="ajax" action="/api/tool/api" data-target="#res-api" data-label="api">
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <button class="run" type="submit">▶ RUN api</button></form>
+              <div class="result" id="res-api"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">nuclei()</span><span class="cat">scanner</span></div>
+  <div class="td"><div class="desc">Template-based vulnerability scan (offline templates).</div>
+    <form class="ajax" action="/api/tool/nuclei" data-target="#res-nuclei" data-label="nuclei">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN nuclei</button></form>
+    <div class="result" id="res-nuclei"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">nikto()</span><span class="cat">scanner</span></div>
+  <div class="td"><div class="desc">Web-server misconfig / known-vuln scan.</div>
+    <form class="ajax" action="/api/tool/nikto" data-target="#res-nikto" data-label="nikto">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN nikto</button></form>
+    <div class="result" id="res-nikto"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">wapiti()</span><span class="cat">scanner</span></div>
+  <div class="td"><div class="desc">Black-box web-app vulnerability scan.</div>
+    <form class="ajax" action="/api/tool/wapiti" data-target="#res-wapiti" data-label="wapiti">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN wapiti</button></form>
+    <div class="result" id="res-wapiti"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">commix()</span><span class="cat">injection</span></div>
+  <div class="td"><div class="desc">Automated command-injection exploitation.</div>
+    <form class="ajax" action="/api/tool/commix" data-target="#res-commix" data-label="commix">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run danger" type="submit">▶ RUN commix</button></form>
+    <div class="result" id="res-commix"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">sstimap()</span><span class="cat">injection</span></div>
+  <div class="td"><div class="desc">SSTI detection + exploitation.</div>
+    <form class="ajax" action="/api/tool/sstimap" data-target="#res-sstimap" data-label="sstimap">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run danger" type="submit">▶ RUN sstimap</button></form>
+    <div class="result" id="res-sstimap"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">dalfox()</span><span class="cat">injection</span></div>
+  <div class="td"><div class="desc">XSS discovery and verification.</div>
+    <form class="ajax" action="/api/tool/dalfox" data-target="#res-dalfox" data-label="dalfox">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run danger" type="submit">▶ RUN dalfox</button></form>
+    <div class="result" id="res-dalfox"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">crlfuzz()</span><span class="cat">injection</span></div>
+  <div class="td"><div class="desc">CRLF-injection testing.</div>
+    <form class="ajax" action="/api/tool/crlfuzz" data-target="#res-crlfuzz" data-label="crlfuzz">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run danger" type="submit">▶ RUN crlfuzz</button></form>
+    <div class="result" id="res-crlfuzz"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">corsy()</span><span class="cat">config</span></div>
+  <div class="td"><div class="desc">CORS misconfiguration testing.</div>
+    <form class="ajax" action="/api/tool/corsy" data-target="#res-corsy" data-label="corsy">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN corsy</button></form>
+    <div class="result" id="res-corsy"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">oralyzer()</span><span class="cat">client</span></div>
+  <div class="td"><div class="desc">Open-redirect testing.</div>
+    <form class="ajax" action="/api/tool/oralyzer" data-target="#res-oralyzer" data-label="oralyzer">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN oralyzer</button></form>
+    <div class="result" id="res-oralyzer"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">testssl()</span><span class="cat">crypto</span></div>
+  <div class="td"><div class="desc">Full TLS/cipher/cert audit.</div>
+    <form class="ajax" action="/api/tool/testssl" data-target="#res-testssl" data-label="testssl">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN testssl</button></form>
+    <div class="result" id="res-testssl"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">graphw00f()</span><span class="cat">api</span></div>
+  <div class="td"><div class="desc">Fingerprint the GraphQL engine.</div>
+    <form class="ajax" action="/api/tool/graphw00f" data-target="#res-graphw00f" data-label="graphw00f">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN graphw00f</button></form>
+    <div class="result" id="res-graphw00f"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">clairvoyance()</span><span class="cat">api</span></div>
+  <div class="td"><div class="desc">Recover a GraphQL schema (introspection off).</div>
+    <form class="ajax" action="/api/tool/clairvoyance" data-target="#res-clairvoyance" data-label="clairvoyance">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN clairvoyance</button></form>
+    <div class="result" id="res-clairvoyance"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">kiterunner()</span><span class="cat">api</span></div>
+  <div class="td"><div class="desc">API route/endpoint discovery.</div>
+    <form class="ajax" action="/api/tool/kiterunner" data-target="#res-kiterunner" data-label="kiterunner">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN kiterunner</button></form>
+    <div class="result" id="res-kiterunner"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">smuggler()</span><span class="cat">api</span></div>
+  <div class="td"><div class="desc">HTTP request-smuggling detection.</div>
+    <form class="ajax" action="/api/tool/smuggler" data-target="#res-smuggler" data-label="smuggler">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run danger" type="submit">▶ RUN smuggler</button></form>
+    <div class="result" id="res-smuggler"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">linkfinder()</span><span class="cat">recon</span></div>
+  <div class="td"><div class="desc">Endpoints hidden in JavaScript.</div>
+    <form class="ajax" action="/api/tool/linkfinder" data-target="#res-linkfinder" data-label="linkfinder">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN linkfinder</button></form>
+    <div class="result" id="res-linkfinder"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">secretfinder()</span><span class="cat">recon</span></div>
+  <div class="td"><div class="desc">API keys/secrets in JavaScript.</div>
+    <form class="ajax" action="/api/tool/secretfinder" data-target="#res-secretfinder" data-label="secretfinder">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN secretfinder</button></form>
+    <div class="result" id="res-secretfinder"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">cmseek()</span><span class="cat">recon</span></div>
+  <div class="td"><div class="desc">Detect/fingerprint the CMS.</div>
+    <form class="ajax" action="/api/tool/cmseek" data-target="#res-cmseek" data-label="cmseek">
+      <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+      <button class="run" type="submit">▶ RUN cmseek</button></form>
+    <div class="result" id="res-cmseek"></div></div></div>
+
+<div class="tool"><div class="th"><span class="nm">jwt_tool()</span><span class="cat">session</span></div>
+  <div class="td"><div class="desc">Analyze/crack a supplied JWT (offline — paste a token).</div>
+    <form class="ajax" action="/api/tool/jwt_tool" data-target="#res-jwt_tool" data-label="jwt_tool">
+      <div class="f"><label>jwt token</label><input name="jwt" placeholder="eyJ..."></div>
+      <button class="run" type="submit">▶ RUN jwt_tool</button></form>
+    <div class="result" id="res-jwt_tool"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">record_finding()</span><span class="cat">evidence</span></div>
+            <div class="td"><div class="desc">Record a CONFIRMED finding — proof is required.</div>
+              <form class="ajax" action="/api/tool/record_finding" data-target="#res-record_finding" data-label="record_finding">
+                <div class="f"><label>title</label><input name="title"></div>
+                <div class="row"><div class="f"><label>severity</label><select name="severity">
+                    <option>info</option><option>low</option><option>medium</option><option selected>high</option><option>critical</option></select></div>
+                  <div class="f"><label>vuln_class</label><input name="vuln_class" placeholder="sqli"></div></div>
+                <div class="f"><label>target</label><input name="target" value="http://172.28.0.2:3000"></div>
+                <div class="f"><label>description</label><textarea name="description"></textarea></div>
+                <div class="f"><label>proof (required)</label><textarea name="proof"></textarea></div>
+                <div class="f"><label>remediation (optional)</label><textarea name="remediation"></textarea></div>
+                <button class="run" type="submit">▶ RECORD finding</button></form>
+              <div class="result" id="res-record_finding"></div></div></div>
+
+          <div class="tool"><div class="th"><span class="nm">export_report()</span><span class="cat">evidence</span></div>
+            <div class="td"><div class="desc">Write a markdown report of all findings.</div>
+              <form class="ajax" action="/api/tool/export_report" data-target="#res-export_report" data-label="export_report">
+                <div class="f"><label>target (optional label)</label><input name="target"></div>
+                <button class="run danger" type="submit">⇩ EXPORT report</button></form>
+              <div class="result" id="res-export_report"></div></div></div>
+
+        </div>
+      </section>
+
+      <!-- SCOPE -->
+      <section class="view" data-view="scope">
+        <div><div class="eyebrow">authorization</div><h2 class="sec">Scope — the only targets anything may touch</h2></div>
+        <div class="note">Default-deny. A host with a port authorizes only that port; a host alone authorizes any port. Everything not listed is refused on every call. Paste a full URL (the host — and port, if present — is extracted) or type a host.</div>
+        <div class="card"><div class="content" style="padding:15px">
+          <form class="ajax scopebox-form" action="/api/scope/add" data-target="#scopebox" data-label="target authorized">
+            <div class="f"><label>host or URL</label><input name="host" placeholder="https://app.example.com:443/path  —or—  app.example.com"></div>
+            <div class="f" style="max-width:120px"><label>port (optional)</label><input name="port" placeholder="443"></div>
+            <button class="addbtn" type="submit">+ AUTHORIZE</button>
+          </form>
+          <div id="scopebox"></div>
+        </div></div>
+      </section>
+
+      <!-- FINDINGS -->
+      <section class="view" data-view="findings">
+        <div><div class="eyebrow">evidence</div><h2 class="sec">Findings — no PoC, no finding</h2></div>
+        <div class="card"><div id="findings"></div></div>
+        <form class="ajax" action="/api/tool/export_report" data-target="#res-findings-export" data-label="report exported" style="max-width:260px">
+          <button class="run danger" type="submit">⇩ EXPORT report.md</button></form>
+        <div class="result" id="res-findings-export"></div>
+        <div style="margin-top:22px"><div class="eyebrow">captured runs</div><h2 class="sec">Results — every tool run (recon, scans, phase groups)</h2></div>
+        <div class="note">Captured automatically from every run, even without a hand-recorded finding. Most recent first.</div>
+        <div class="row" style="gap:10px;margin:8px 0">
+          <a class="addbtn" href="/api/results/export?fmt=md" download>⤓ Download all (.md)</a>
+          <a class="addbtn" href="/api/results/export?fmt=json" download>⤓ Download all (.json)</a>
+          <button class="run" type="button" id="refresh-results" style="margin:0">⟳ REFRESH</button>
+          <form class="ajax" action="/api/results/clear" data-target="#resultsbox" data-label="results cleared" style="margin:0"><button class="run danger" type="submit" style="margin:0">✕ CLEAR</button></form>
+        </div>
+        <div class="card"><div class="content" style="padding:12px"><div id="resultsbox"></div></div></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" data-view="settings">
+        <div><div class="eyebrow">account</div><h2 class="sec">Settings — change password</h2></div>
+        <div class="card"><div class="content" style="padding:15px">
+          <form class="ajax" action="/change-password" data-target="#res-chpw" data-label="password changed" style="max-width:420px">
+            <div class="f"><label>current password</label><input name="current" type="password" autocomplete="current-password"></div>
+            <div class="f"><label>new password (min 12 chars)</label><input name="new" type="password" autocomplete="new-password"></div>
+            <div class="f"><label>confirm new password</label><input name="confirm" type="password" autocomplete="new-password"></div>
+            <button class="run" type="submit">▶ CHANGE PASSWORD</button>
+          </form>
+          <div class="result" id="res-chpw"></div>
+          <div class="hint" style="margin-top:10px">After changing, the bootstrap password stops working — only your new one will log you in.</div>
+        </div></div>
+
+        <div style="margin-top:24px"><div class="eyebrow">authorization</div><h2 class="sec">Scope — bulk authorize</h2></div>
+        <div class="note">Paste targets to allow — full URLs, host:port, or bare hosts — one per line (commas/spaces also work). Each is parsed to host + port and added to scope in one go. Default-deny still applies; loopback/link-local/metadata are refused.</div>
+        <div class="card"><div class="content" style="padding:15px">
+          <form class="ajax" action="/api/scope/add_bulk" data-target="#res-scope-bulk" data-label="targets authorized">
+            <div class="f"><label>targets (one per line)</label>
+              <textarea name="targets" rows="8" spellcheck="false" placeholder="https://app.example.com&#10;http://172.28.0.2:3000/rest/products&#10;test.example.com:8443&#10;10.0.0.5"></textarea></div>
+            <button class="run" type="submit">▶ AUTHORIZE ALL</button>
+          </form>
+          <div class="result" id="res-scope-bulk"></div>
+        </div></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

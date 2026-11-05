@@ -1,0 +1,15 @@
+# Wraith Console (wraith-ui) deps. Deliberately NO fastmcp: the UI runs the tools
+# in-process by importing mcp_server.{tools,findings,config,scope_guard,aggregate},
+# none of which import fastmcp. Keeping fastmcp out avoids its sse-starlette pin
+# (starlette>=0.49) clashing with fastapi's (starlette<0.42). playwright is already
+# in the base image — but under a different python than uvicorn's, so it must be installed
+# into the UI's own env too (browsers stay baked in /ms-playwright). Pinned to the base version.
+playwright==1.47.0
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+jinja2==3.1.4
+itsdangerous==2.2.0
+python-multipart==0.0.17
+httpx==0.28.1
+curl_cffi==0.16.3
+pyyaml==6.0.2

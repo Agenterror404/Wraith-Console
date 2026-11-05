@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Wraith Console{% endblock %}</title>
+{% block head %}{% endblock %}
+<link rel="stylesheet" href="/static/wraith.css?v={{ asset_ver }}">
+</head>
+<body>
+<div class="fx scan"></div><div class="fx vig"></div>
+{% block body %}{% endblock %}
+<div class="toasts" id="toasts"></div>
+</body>
+</html>

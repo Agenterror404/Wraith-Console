@@ -1,0 +1,8 @@
+{% for r in rows %}<div class="rrow">
+  <div class="rh"><span class="t">[{{ r.ts|ts }}]</span> <span class="tool">{{ r.tool }}</span>{% if r.target %} <span class="tgt">{{ r.target }}</span>{% endif %} <span class="kind">{{ r.kind }}</span> <span class="{% if r.error %}refused{% else %}ok{% endif %}">rc={{ r.rc if r.rc is not none else '—' }}</span>{% if r.error %} <span class="refused">{{ r.error[:70] }}</span>{% endif %}
+    <a class="exportlink" href="/api/results/export?fmt=md&latest=1&tool={{ r.tool|urlencode }}{% if r.target %}&target={{ r.target|urlencode }}{% endif %}" download>⤓</a></div>
+  {% if r.shot %}<a href="/api/shot/{{ r.shot|urlencode }}" target="_blank" rel="noopener"><img class="shot" src="/api/shot/{{ r.shot|urlencode }}" loading="lazy" alt="screenshot"></a>{% endif %}
+  {% if r.preview %}<pre class="rpre">{{ r.preview }}</pre>{% endif %}
+</div>
+{% endfor %}{% if not rows %}<div class="hint">No results captured yet — run a tool, Run Scan, or a phase group and they'll appear here.</div>
+{% endif %}

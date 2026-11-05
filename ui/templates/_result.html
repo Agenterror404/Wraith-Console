@@ -1,0 +1,10 @@
+{% if refused %}
+  <div class="refused">REFUSED · {{ refused }}</div>
+{% elif result and result.error %}
+  <div class="meta">{{ tool }}{% if target %} · {{ target }}{% endif %}</div>
+  <pre class="err">error: {{ result.error }}</pre>
+{% else %}
+  <div class="meta">{{ tool }}{% if target %} · {{ target }}{% endif %}
+    {% if result_text %}<a class="exportlink" href="/api/results/export?fmt=md&latest=1&tool={{ tool|urlencode }}{% if target %}&target={{ target|urlencode }}{% endif %}" download>⤓ export</a>{% endif %}</div>
+  <pre>{{ result_text }}</pre>
+{% endif %}
